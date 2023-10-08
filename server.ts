@@ -1,5 +1,5 @@
 import express from "express";
-import router from "./routes/secured";
+import securedRouter from "./routes/secured";
 import responceMiddleware from "./middlewares/responseMiddleware";
 import { log } from "./utils/logger";
 
@@ -8,6 +8,9 @@ const app = express();
 
 app.use(express.json());
 app.use(responceMiddleware);
+
+const router = express.Router();
+router.use("/secured", securedRouter);
 app.use(router);
 
 app.use((req, res, next) => {
