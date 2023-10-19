@@ -3,7 +3,7 @@ import securedRouter from "./routes/secured";
 import responceMiddleware from "./middlewares/responseMiddleware";
 import { log } from "./utils/logger";
 
-const PORT = process.env.PORT ?? 5000;
+const PORT = process.env.PORT ?? 3000;
 const app = express();
 
 app.use(express.json());
