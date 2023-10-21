@@ -1,7 +1,9 @@
+import "reflect-metadata"
 import express from "express";
 import securedRouter from "./routes/secured";
 import responceMiddleware from "./middlewares/responseMiddleware";
 import { log } from "./utils/logger";
+
 
 const PORT = process.env.PORT ?? 3000;
 const app = express();
