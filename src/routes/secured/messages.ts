@@ -1,11 +1,11 @@
-import express from "express";
-import { messagesController } from "../../controllers/secured";
+import express from 'express'
+import { messagesController } from '../../controllers/secured'
 
-const messagesRouter = express.Router();
+const messagesRouter = express.Router()
 
-messagesRouter.get("/", messagesController.getMessages);
-messagesRouter.post("/", messagesController.createNewMessage);
-messagesRouter.delete("/:id", messagesController.deleteMessage);
-messagesRouter.patch("/:id", messagesController.changeMessageText);
+messagesRouter.get('/', messagesController.getMessages)
+messagesRouter.post('/', messagesController.createNewMessage)
+messagesRouter.delete('/:id', messagesController.deleteMessage)
+messagesRouter.patch('/:id', messagesController.changeMessageText)
 
-export default messagesRouter;
+export default messagesRouter
