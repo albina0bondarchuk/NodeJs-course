@@ -5,7 +5,6 @@ import {
     OneToOne,
     JoinColumn,
 } from 'typeorm'
-import { Chats } from './Chats'
 import { Users } from './Users'
 
 @Entity()
@@ -15,10 +14,10 @@ export class Settings {
 
     @OneToOne((type) => Users)
     @JoinColumn({
-        name: 'chat_id',
+        name: 'user_id',
         referencedColumnName: 'id',
     })
-    chat: Chats
+    userId: Users
 
     @Column({ type: 'json', nullable: true })
     chatSetting: object

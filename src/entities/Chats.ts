@@ -6,8 +6,11 @@ import {
   ManyToMany,
   JoinTable,
   ManyToOne,
+  OneToMany,
 } from "typeorm";
 import { Users } from "./Users";
+import { ChatUser } from "./ChatUser";
+import { ChatType } from "../constants/chats";
 
 @Entity()
 export class Chats {
@@ -19,21 +22,7 @@ export class Chats {
     name: "creator_id",
     referencedColumnName: "id",
   })
-  creator: Users;
-
-  @ManyToMany((type) => Users)
-  @JoinTable({
-    name: "chat_user",
-    joinColumn: {
-      name: "chat_id",
-      referencedColumnName: "id",
-    },
-    inverseJoinColumn: {
-      name: "user_id",
-      referencedColumnName: "id",
-    },
-  })
-  users: Users[];
+  creatorId: number;
 
   @Column({ name: "created_at", type: "timestamptz", nullable: false })
   createdAt: Date;
@@ -44,8 +33,11 @@ export class Chats {
   @Column()
   status: number;
 
+  @Column({ nullable: true })
+  title: string;
+
   @Column()
-  type: number;
+  type: ChatType;
 
   @Column({ nullable: true })
   icon: string;

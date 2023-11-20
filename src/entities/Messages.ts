@@ -23,14 +23,14 @@ export class Messages {
         name: 'creator_id',
         referencedColumnName: 'id',
     })
-    creator: Users
+    creatorId: number
 
     @ManyToOne((type) => Chats)
     @JoinColumn({
         name: 'chat_id',
         referencedColumnName: 'id',
     })
-    chat: Chats
+    chatId: Chats
 
     @ManyToMany((type) => Users)
     @JoinTable({

@@ -2,25 +2,28 @@
 import { Request, NextFunction } from "express";
 import { log } from "../../utils/logger";
 import { AppDataSource } from "../../ormconfig";
-import { Messages } from "../../entities/Messages";
 import { Chats } from "../../entities/Chats";
 import { Users } from "../../entities/Users";
-import { ACTIVE_STATUS, DELETED_STATUS } from "../../constants/chat";
+import { DEFAULT_CHAT_PROPS, UserRole } from "../../constants/chats";
 import { In } from "typeorm";
+import {
+  ChatsRepository,
+  createChat,
+  findUserInChat,
+  getChatsByUser,
+} from "../../repositories/chats";
+import { DELETED_STATUS } from "../../constants/settings";
 
-export const getChats = async (req: Request, res: any, next: NextFunction) => {
+export const getChats = async (req: any, res: any, next: NextFunction) => {
   try {
     log.info(`GET request: ${req.method} /chats${req.url}`);
 
-    const { userId } = req.query;
-    const chats = await AppDataSource.getRepository(Chats)
-      .createQueryBuilder("chats")
-      .innerJoin("chats.users", "chat_user")
-      .where("user_id = :userId", { userId: Number(userId) })
-      .andWhere("status = :status", { status: ACTIVE_STATUS })
-      .getMany();
+    const userId = req.auth.userId;
+    const chatsByUsers = await getChatsByUser(Number(userId));
 
-    res.successRequest(chats);
+    const preparedChats = chatsByUsers.map((chat) => chat.chatId);
+
+    res.successRequest(preparedChats);
   } catch (error: any) {
     log.error(error);
     res.serverError({ message: error.message });
@@ -28,31 +31,23 @@ export const getChats = async (req: Request, res: any, next: NextFunction) => {
   }
 };
 
-export const createNewChat = async (
-  req: Request,
-  res: any,
-  next: NextFunction,
-) => {
+export const createNewChat = async (req: any, res: any, next: NextFunction) => {
   try {
     log.info(`POST request: ${req.method} /chats${req.url}`);
 
-    const { type, creatorId, users } = req.body;
-    console.log(req.body);
+    const { type, users } = req.body;
+    const creatorId: number = req.auth.userId;
 
-    const chat = new Chats();
-    chat.creator = await AppDataSource.getRepository(Users).findOneBy({
-      id: Number(creatorId),
-    });
-    chat.type = type;
-    chat.users = await AppDataSource.getRepository(Users).findBy({
-      id: In(JSON.parse(users).map((user) => Number(user))),
-    });
-    chat.createdAt = new Date();
-    chat.status = ACTIVE_STATUS;
+    const newChat = {
+      creatorId,
+      type,
+      users: [...JSON.parse(users), creatorId],
+      ...DEFAULT_CHAT_PROPS,
+    };
 
-    const successAddedChat =
-      await AppDataSource.getRepository(Chats).save(chat);
-    res.successRequest(successAddedChat);
+    await createChat(newChat);
+
+    res.successRequest("chat was added");
   } catch (error: any) {
     log.error(error);
     res.serverError({ message: error.message });
@@ -60,22 +55,25 @@ export const createNewChat = async (
   }
 };
 
-export const deleteChat = async (
-  req: Request,
-  res: any,
-  next: NextFunction,
-) => {
+export const deleteChat = async (req: any, res: any, next: NextFunction) => {
   try {
     log.info(`DELETE request: ${req.method} /chats${req.url}`);
     log.info(`Query parameters: ${JSON.stringify(req.params)}`);
 
     const { id: chatId } = req.params;
-    const deletedChat = await AppDataSource.getRepository(Chats).findOneBy({
+    const deletedChat = await ChatsRepository.findOneBy({
       id: Number(chatId),
     });
+    const currentUserWithRole = await findUserInChat(req.auth.userId, chatId);
+
+    if (currentUserWithRole.role !== UserRole.ADMIN) {
+      return res.forbidden({
+        message: "You do not have permission to delete the chat",
+      });
+    }
+
     deletedChat.status = DELETED_STATUS;
-    const successDeletedChat =
-      await AppDataSource.getRepository(Chats).save(deletedChat);
+    const successDeletedChat = await ChatsRepository.save(deletedChat);
 
     res.successRequest(successDeletedChat);
   } catch (error: any) {
@@ -85,19 +83,23 @@ export const deleteChat = async (
   }
 };
 
-export const changeChat = async (
-  req: Request,
-  res: any,
-  next: NextFunction,
-) => {
+export const changeChat = async (req: any, res: any, next: NextFunction) => {
   try {
     log.info(`PATCH request: ${req.method} /messages${req.url}`);
     log.info(`Query parameters: ${JSON.stringify(req.params)}`);
 
     const { id: chatId } = req.params;
-    const updatedChat = await AppDataSource.getRepository(Chats).findOneBy({
+    const updatedChat = await ChatsRepository.findOneBy({
       id: Number(chatId),
     });
+
+    const currentUserWithRole = await findUserInChat(req.auth.userId, chatId);
+
+    if (currentUserWithRole.role !== UserRole.ADMIN) {
+      return res.forbidden({
+        message: "You do not have permission to delete the chat",
+      });
+    }
 
     if (req.body.icon) {
       log.info(`Change chat type`);
@@ -109,9 +111,13 @@ export const changeChat = async (
       updatedChat.type = +req.body.type;
     }
 
+    if (req.body.title) {
+      log.info("Change chat title");
+      updatedChat.title = req.body.title;
+    }
+
     updatedChat.modifiedAt = new Date();
-    const successUpdatedMessage =
-      await AppDataSource.getRepository(Chats).save(updatedChat);
+    const successUpdatedMessage = await ChatsRepository.save(updatedChat);
 
     res.successRequest(successUpdatedMessage);
   } catch (error: any) {

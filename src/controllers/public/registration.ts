@@ -1,11 +1,10 @@
-import { Request, NextFunction } from "express";
-import { AppDataSource } from "../../ormconfig";
-import { log } from "../../utils/logger";
-import { Users } from "../../entities/Users";
-import { Chats } from "../../entities/Chats";
-import { ACTIVE_STATUS } from "../../constants/chat";
 
-//add access and refresh tokens
+import { Request, NextFunction } from "express";
+
+import { log } from "../../utils/logger";
+import { UsersRepository, isUserExist } from "../../repositories/users";
+
+import { passwordHash } from "../../utils/authentication";
 
 export const registration = async (
   req: Request,
@@ -17,26 +16,31 @@ export const registration = async (
 
     const { email, nickname, password, firstName, lastName, phoneNumber } =
       req.body;
-    const user = new Users();
-    user.firstName = firstName;
-    user.lastName = lastName;
-    user.nickname = nickname;
-    user.email = email;
-    user.password = password;
-    user.phoneNumber = phoneNumber;
-    user.createdAt = new Date();
-    console.log(nickname);
 
-    const createdUser = await AppDataSource.getRepository(Users).save(user);
-    res.successRequest(createdUser);
+    const isExist = await isUserExist(nickname, email);
+
+    if (!isExist) {
+      const hashedPassword = await passwordHash(password)
+      const user = {
+        firstName,
+        lastName,
+        nickname,
+        email,
+        phoneNumber,
+        password: hashedPassword,
+        createdAt: new Date(),
+      };
+
+      await UsersRepository.save(user);
+      res.successRequest();
+    } else {
+      res.badRequest({
+        message: "A user with this nickname or email already exists",
+      });
+    }
   } catch (error: any) {
     log.error(error);
     res.serverError({ message: error.message });
     next(error);
   }
 };
-
-// - Registration  - POST
-// {
-//   email, nickName, password, firstName, lastName, phoneNumber
-// }

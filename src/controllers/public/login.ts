@@ -1,31 +1,85 @@
 import { Request, NextFunction } from "express";
-import { AppDataSource } from "../../ormconfig";
-import { log } from "../../utils/logger";
-import { Users } from "../../entities/Users";
-import { Chats } from "../../entities/Chats";
-import { ACTIVE_STATUS } from "../../constants/chat";
+import jwt from "jsonwebtoken";
 
-//add access and refresh tokens
+import { log } from "../../utils/logger";
+import {
+  generateAccessToken,
+  generateRefreshToken,
+  passwordCompare,
+  replaceDbRefreshToken,
+  validateToken,
+} from "../../utils/authentication";
+
+import { UsersRepository } from "../../repositories/users";
+import { findToken } from "../../repositories/tokens";
+
+const updateTokens = async (userId) => {
+  const accessToken = generateAccessToken(userId);
+  const refreshToken = generateRefreshToken();
+
+  await replaceDbRefreshToken(accessToken);
+  return { accessToken, refreshToken };
+};
 
 export const login = async (req: Request, res: any, next: NextFunction) => {
   try {
-    log.info(`GET request: ${req.method} /messages${req.url}`);
+    log.info(`POST request: ${req.method} /login${req.url}`);
 
     const { nickname, password } = req.body;
-    const user = await AppDataSource.getRepository(Users).findOneBy({
+    const user = await UsersRepository.findOneBy({
       nickname,
-      password,
     });
 
-    const chats = await AppDataSource.getRepository(Chats)
-      .createQueryBuilder("chats")
-      .innerJoin("chats.users", "chat_user")
-      .where("user_id = :userId", { userId: Number(user.id) })
-      .andWhere("status = :status", { status: ACTIVE_STATUS })
-      .take(10)
-      .getMany();
+    const match = await passwordCompare(password, user.password);
 
-    res.successRequest({ user, chats });
+    if (match) {
+      const tokens = await updateTokens(user.id);
+      res.successRequest({
+        tokens,
+      });
+    } else {
+      res.notFound({ message: "uncorrect login or password" });
+    }
+  } catch (error: any) {
+    log.error(error);
+    res.serverError({ message: error.message });
+    next(error);
+  }
+};
+
+export const refreshToken = async (
+  req: Request,
+  res: any,
+  next: NextFunction,
+) => {
+  try {
+    log.info(`POST request: ${req.method} /${req.url}`);
+
+    const { refreshToken } = req.body;
+    let payload;
+
+    try {
+      payload = validateToken(refreshToken);
+      if (payload.type !== "refresh") {
+        res.badRequest({ message: "Invalid token!" });
+      }
+    } catch (e) {
+      if (e instanceof jwt.TokenExpiredError) {
+        res.badRequest({ message: "Token expired!" });
+        next();
+      }
+      if (e instanceof jwt.JsonWebTokenError) {
+        res.badRequest({ message: "Invalid token!" });
+        next();
+      }
+    }
+
+    const token = await findToken(refreshToken);
+
+    const newTokens = await updateTokens(token);
+    res.successRequest({
+      newTokens,
+    });
   } catch (error: any) {
     log.error(error);
     res.serverError({ message: error.message });
