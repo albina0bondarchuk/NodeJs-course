@@ -1,5 +1,14 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from "typeorm";
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
+  ManyToMany,
+  JoinTable,
+  JoinColumn,
+} from "typeorm";
 import { ChatUser } from "./ChatUser";
+import { UserContacts } from "./UserContacts";
 
 @Entity()
 export class Users {
@@ -20,6 +29,9 @@ export class Users {
 
   @Column()
   password: string;
+
+  @OneToMany((type) => UserContacts, (contacts)=>contacts.owner)
+  contacts: UserContacts[];
 
   @Column({ name: "created_at", type: "timestamptz", nullable: false })
   createdAt: Date;

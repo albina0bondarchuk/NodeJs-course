@@ -13,6 +13,7 @@ import {
   getChatsByUser,
 } from "../../repositories/chats";
 import { DELETED_STATUS } from "../../constants/settings";
+import { getUserById } from "../../repositories/users";
 
 export const getChats = async (req: any, res: any, next: NextFunction) => {
   try {
@@ -35,13 +36,15 @@ export const createNewChat = async (req: any, res: any, next: NextFunction) => {
   try {
     log.info(`POST request: ${req.method} /chats${req.url}`);
 
-    const { type, users } = req.body;
+    const { type, users, title } = req.body;
     const creatorId: number = req.auth.userId;
+    const creator = await getUserById(creatorId);
 
     const newChat = {
-      creatorId,
+      creator,
       type,
-      users: [...JSON.parse(users), creatorId],
+      users: [...users, creatorId],
+      title,
       ...DEFAULT_CHAT_PROPS,
     };
 

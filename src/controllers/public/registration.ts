@@ -1,10 +1,15 @@
-
 import { Request, NextFunction } from "express";
 
 import { log } from "../../utils/logger";
-import { UsersRepository, isUserExist } from "../../repositories/users";
+import {
+  UsersRepository,
+  getUserByNicknameAndPassword,
+  isUserExist,
+} from "../../repositories/users";
 
 import { passwordHash } from "../../utils/authentication";
+import { SettingsRepository } from "../../repositories/settings";
+import { DefaultUserSettings } from "../../constants/settings";
 
 export const registration = async (
   req: Request,
@@ -20,7 +25,7 @@ export const registration = async (
     const isExist = await isUserExist(nickname, email);
 
     if (!isExist) {
-      const hashedPassword = await passwordHash(password)
+      const hashedPassword = await passwordHash(password);
       const user = {
         firstName,
         lastName,
@@ -32,6 +37,15 @@ export const registration = async (
       };
 
       await UsersRepository.save(user);
+      const newUser = await getUserByNicknameAndPassword(
+        nickname,
+        hashedPassword,
+      );
+
+      await SettingsRepository.save({
+        userId: newUser.id,
+        chatSetting: DefaultUserSettings,
+      });
       res.successRequest();
     } else {
       res.badRequest({

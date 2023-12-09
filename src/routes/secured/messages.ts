@@ -7,5 +7,6 @@ messagesRouter.get('/', messagesController.getMessages)
 messagesRouter.post('/', messagesController.createNewMessage)
 messagesRouter.delete('/:id', messagesController.deleteMessage)
 messagesRouter.patch('/:id', messagesController.changeMessageText)
+messagesRouter.post('/forward', messagesController.forwardMessage)
 
 export default messagesRouter

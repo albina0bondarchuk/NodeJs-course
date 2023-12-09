@@ -18,11 +18,7 @@ export class Chats {
   id: number;
 
   @ManyToOne((type) => Users)
-  @JoinColumn({
-    name: "creator_id",
-    referencedColumnName: "id",
-  })
-  creatorId: number;
+  creator: Users;
 
   @Column({ name: "created_at", type: "timestamptz", nullable: false })
   createdAt: Date;

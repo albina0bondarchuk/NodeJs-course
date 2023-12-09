@@ -2,11 +2,12 @@ import { ChatType, UserRole } from "../constants/chats";
 import { ACTIVE_STATUS } from "../constants/settings";
 import { ChatUser } from "../entities/ChatUser";
 import { Chats } from "../entities/Chats";
+import { Users } from "../entities/Users";
 import { AppDataSource } from "../ormconfig";
 import { log } from "../utils/logger";
 
 type createChatProps = {
-  creatorId: number;
+  creator: Users;
   type: ChatType;
   users: number[];
   createdAt: Date;
@@ -15,6 +16,9 @@ type createChatProps = {
 
 export const ChatsRepository = AppDataSource.getRepository(Chats);
 export const ChatUserRepository = AppDataSource.getRepository(ChatUser);
+
+export const getChatById = async (chatId: number) =>
+  await ChatsRepository.findOneBy({ id: chatId });
 
 export const getChatsByUser = async (userId: number) =>
   await ChatUserRepository.createQueryBuilder("chat_user")
@@ -31,7 +35,7 @@ export const createChat = async (chat: createChatProps) => {
       try {
         await ChatUserRepository.save({
           userId: user,
-          role: user === chat.creatorId ? UserRole.ADMIN : UserRole.DEFAULT,
+          role: user === chat.creator.id ? UserRole.ADMIN : UserRole.DEFAULT,
           chatId: newChat.id,
         });
       } catch (e) {

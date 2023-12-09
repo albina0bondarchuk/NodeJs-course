@@ -5,10 +5,10 @@ import { AppDataSource } from "../ormconfig";
 
 export const TokensRepository = AppDataSource.getRepository(Token);
 
-export const refreshToken = async (userId: string) => {
+export const refreshToken = async (userId: number, tokenId: string) => {
   await TokensRepository.delete({ userId });
-  await TokensRepository.create({ userId });
+  TokensRepository.save({ userId, tokenId });
 };
 
-export const findToken = async (userId: string) =>
-  await TokensRepository.findOneBy({ userId });
+export const findToken = async (tokenId: string) =>
+  await TokensRepository.findOneBy({ tokenId });

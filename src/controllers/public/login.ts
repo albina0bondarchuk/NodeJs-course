@@ -13,11 +13,12 @@ import {
 import { UsersRepository } from "../../repositories/users";
 import { findToken } from "../../repositories/tokens";
 
-const updateTokens = async (userId) => {
+const updateTokens = async (userId: number) => {
   const accessToken = generateAccessToken(userId);
   const refreshToken = generateRefreshToken();
 
-  await replaceDbRefreshToken(accessToken);
+  await replaceDbRefreshToken(userId, refreshToken);
+
   return { accessToken, refreshToken };
 };
 
@@ -56,27 +57,10 @@ export const refreshToken = async (
     log.info(`POST request: ${req.method} /${req.url}`);
 
     const { refreshToken } = req.body;
-    let payload;
-
-    try {
-      payload = validateToken(refreshToken);
-      if (payload.type !== "refresh") {
-        res.badRequest({ message: "Invalid token!" });
-      }
-    } catch (e) {
-      if (e instanceof jwt.TokenExpiredError) {
-        res.badRequest({ message: "Token expired!" });
-        next();
-      }
-      if (e instanceof jwt.JsonWebTokenError) {
-        res.badRequest({ message: "Invalid token!" });
-        next();
-      }
-    }
-
+    console.log(refreshToken);
     const token = await findToken(refreshToken);
 
-    const newTokens = await updateTokens(token);
+    const newTokens = await updateTokens(token.userId);
     res.successRequest({
       newTokens,
     });

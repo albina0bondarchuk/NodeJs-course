@@ -17,7 +17,7 @@ export class Settings {
         name: 'user_id',
         referencedColumnName: 'id',
     })
-    userId: Users
+    userId: number
 
     @Column({ type: 'json', nullable: true })
     chatSetting: object

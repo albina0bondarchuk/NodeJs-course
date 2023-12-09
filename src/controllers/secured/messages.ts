@@ -5,9 +5,14 @@ import { log } from "../../utils/logger";
 import {
   MessagesRepository,
   findForwardedBy,
+  getMessageWithCreatorById,
+  getMessagesByChatId,
+  updateMessage,
 } from "../../repositories/messages";
 import { ACTIVE_STATUS, DELETED_STATUS } from "../../constants/settings";
 import { DEFAULT_MESSAGE_PROPS } from "../../constants/messages";
+import { getUserById } from "../../repositories/users";
+import { getChatById } from "../../repositories/chats";
 
 export const getMessages = async (
   req: Request,
@@ -18,14 +23,21 @@ export const getMessages = async (
     log.info(`GET request: ${req.method} /messages${req.url}`);
 
     const { chatId } = req.query;
-    const messages = await MessagesRepository.find({
-      where: {
-        chatId: { id: Number(chatId) },
-        status: ACTIVE_STATUS,
-      },
-    });
+    const messages = await getMessagesByChatId(chatId);
 
-    res.successRequest(messages);
+    const preparedMessages = messages.map((message) => ({
+      ...message,
+      creator: {
+        id: message.creator.id,
+        fullname: `${message.creator.firstName} ${message.creator.lastName}`,
+        nickname: message.creator.nickname,
+        avatar: message.creator.avatar,
+        email: message.creator.email,
+        phoneNumber: message.creator.phoneNumber,
+      },
+    }));
+
+    res.successRequest(preparedMessages);
   } catch (error: any) {
     log.error(error);
     res.serverError({ message: error.message });
@@ -43,10 +55,14 @@ export const createNewMessage = async (
 
     const { text, chatId } = req.body;
     const creatorId = req.auth.userId;
+
+    const chat = await getChatById(chatId);
+    const creator = await getUserById(creatorId);
+
     const newMessage = {
       text,
-      creatorId,
-      chatId,
+      creator,
+      chat,
       ...DEFAULT_MESSAGE_PROPS,
     };
 
@@ -73,6 +89,7 @@ export const deleteMessage = async (
       id: Number(messageId),
     });
     deletedMessage.status = DELETED_STATUS;
+
     const successDeletedMessage = await MessagesRepository.save(deletedMessage);
 
     res.successRequest(successDeletedMessage);
@@ -95,19 +112,19 @@ export const changeMessageText = async (
     const { id: messageId } = req.params;
 
     const { entity } = req.body;
-    const updatedMessage = await MessagesRepository.findOneBy({
-      id: Number(messageId),
-    });
+    const updatedMessage = await getMessageWithCreatorById(Number(messageId));
+    console.log(updatedMessage.creator.id, req.auth.userId);
 
-    if (updatedMessage.creatorId !== req.auth.userId) {
+    if (updatedMessage.creator.id !== req.auth.userId) {
       return res.forbidden({
         message: "You do not have permission to edit the message",
       });
     }
 
-    updatedMessage.text = entity;
-    updatedMessage.modifiedAt = new Date();
-    const successUpdatedMessage = await MessagesRepository.save(updatedMessage);
+    const successUpdatedMessage = await updateMessage(
+      updatedMessage.id,
+      entity,
+    );
 
     res.successRequest(successUpdatedMessage);
   } catch (error: any) {
@@ -118,22 +135,24 @@ export const changeMessageText = async (
 };
 
 export const forwardMessage = async (
-  req: Request,
+  req: any,
   res: any,
   next: NextFunction,
 ) => {
   try {
     log.info(`POST request: ${req.method} /messages${req.url}`);
 
-    const { referenceTo, text, chatId, creator } = req.body;
-    const forwardedBy = await findForwardedBy(referenceTo);
+    const { referenceTo, text, chatId, creator: forwardedBy } = req.body;
+
+    const chat = await getChatById(chatId);
+    const creator = await getUserById(req.auth.userId);
 
     const newMessage = {
       text,
       creator,
-      chatId,
+      forwardedBy, 
+      chat,
       referenceTo,
-      forwardedBy,
       ...DEFAULT_MESSAGE_PROPS,
     };
 

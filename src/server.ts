@@ -1,6 +1,7 @@
 import express from "express";
 import { expressjwt as jwt } from "express-jwt";
 import helmet from "helmet";
+import cors from "cors";
 
 import { log } from "./utils/logger";
 import { AppDataSource } from "./ormconfig";
@@ -8,9 +9,8 @@ import { AppDataSource } from "./ormconfig";
 import responceMiddleware from "./middlewares/responseMiddleware";
 import securedRouter from "./routes/secured";
 import publicRouter from "./routes/public";
-import { authMiddleware } from "./middlewares/authMiddleware";
 
-const PORT = process.env.PORT ?? 3000;
+const PORT = process.env.PORT ?? 3001;
 
 AppDataSource.initialize()
   .then(() => {
@@ -18,6 +18,7 @@ AppDataSource.initialize()
     app.use(express.json());
     app.use(express.urlencoded());
     app.use(helmet());
+    app.use(cors());
     app.use(responceMiddleware);
     app.use(
       "/secured",
