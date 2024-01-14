@@ -23,7 +23,8 @@ export const getChatById = async (chatId: number) =>
 export const getChatsByUser = async (userId: number) =>
   await ChatUserRepository.createQueryBuilder("chat_user")
     .innerJoinAndSelect("chat_user.chatId", "chats")
-    .where("user_id = :userId", { userId: userId })
+    .innerJoin("chat_user.user", "users")
+    .where("users.id = :userId", { userId: userId })
     .andWhere("status = :status", { status: ACTIVE_STATUS })
     .getMany();
 
@@ -63,8 +64,7 @@ export const findUserInChat = async (userId: string, chatId: string) => {
 
     return result;
   } catch (error) {
-    // Handle the error as needed
-    console.error(error);
+    log.error(error);
     throw error;
   }
 };

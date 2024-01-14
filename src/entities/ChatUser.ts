@@ -16,11 +16,7 @@ export class ChatUser {
   id: number;
 
   @ManyToOne((type) => Users)
-  @JoinColumn({
-    name: "user_id",
-    referencedColumnName: "id",
-  })
-  userId: number;
+  user: Users;
 
   @ManyToOne((type) => Chats)
   @JoinColumn({
