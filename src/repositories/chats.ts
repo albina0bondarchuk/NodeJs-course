@@ -16,6 +16,7 @@ type createChatProps = {
 
 export const ChatsRepository = AppDataSource.getRepository(Chats);
 export const ChatUserRepository = AppDataSource.getRepository(ChatUser);
+export const UsersRepository = AppDataSource.getRepository(Users);
 
 export const getChatById = async (chatId: number) =>
   await ChatsRepository.findOneBy({ id: chatId });
@@ -34,8 +35,11 @@ export const createChat = async (chat: createChatProps) => {
 
     const userPromises = chat.users.map(async (user) => {
       try {
+        const dbUser = await UsersRepository.findOneBy({ id: user });
+        console.log(dbUser);
+
         await ChatUserRepository.save({
-          userId: user,
+          user: dbUser,
           role: user === chat.creator.id ? UserRole.ADMIN : UserRole.DEFAULT,
           chatId: newChat.id,
         });
