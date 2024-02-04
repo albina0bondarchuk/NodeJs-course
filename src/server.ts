@@ -10,7 +10,7 @@ import responceMiddleware from "./middlewares/responseMiddleware";
 import securedRouter from "./routes/secured";
 import publicRouter from "./routes/public";
 
-const PORT = process.env.PORT ?? 3001;
+const PORT = process.env.PORT ?? 3005;
 
 AppDataSource.initialize()
   .then(() => {
