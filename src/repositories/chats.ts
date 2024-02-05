@@ -16,6 +16,7 @@ type createChatProps = {
 
 export const ChatsRepository = AppDataSource.getRepository(Chats);
 export const ChatUserRepository = AppDataSource.getRepository(ChatUser);
+export const UsersRepository = AppDataSource.getRepository(Users);
 
 export const getChatById = async (chatId: number) =>
   await ChatsRepository.findOneBy({ id: chatId });
@@ -23,7 +24,8 @@ export const getChatById = async (chatId: number) =>
 export const getChatsByUser = async (userId: number) =>
   await ChatUserRepository.createQueryBuilder("chat_user")
     .innerJoinAndSelect("chat_user.chatId", "chats")
-    .where("user_id = :userId", { userId: userId })
+    .innerJoin("chat_user.user", "users")
+    .where("users.id = :userId", { userId: userId })
     .andWhere("status = :status", { status: ACTIVE_STATUS })
     .getMany();
 
@@ -33,8 +35,11 @@ export const createChat = async (chat: createChatProps) => {
 
     const userPromises = chat.users.map(async (user) => {
       try {
+        const dbUser = await UsersRepository.findOneBy({ id: user });
+        console.log(dbUser);
+
         await ChatUserRepository.save({
-          userId: user,
+          user: dbUser,
           role: user === chat.creator.id ? UserRole.ADMIN : UserRole.DEFAULT,
           chatId: newChat.id,
         });
@@ -63,8 +68,7 @@ export const findUserInChat = async (userId: string, chatId: string) => {
 
     return result;
   } catch (error) {
-    // Handle the error as needed
-    console.error(error);
+    log.error(error);
     throw error;
   }
 };

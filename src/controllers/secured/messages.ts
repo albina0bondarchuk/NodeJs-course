@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Request, NextFunction } from "express";
-import { MOCKED_CHAT } from "../../mocked/MockedChat";
 import { log } from "../../utils/logger";
 import {
   MessagesRepository,
@@ -13,6 +12,8 @@ import { ACTIVE_STATUS, DELETED_STATUS } from "../../constants/settings";
 import { DEFAULT_MESSAGE_PROPS } from "../../constants/messages";
 import { getUserById } from "../../repositories/users";
 import { getChatById } from "../../repositories/chats";
+import { sendNotification } from "../../services/notifications";
+import { NotificationsTypes } from "../../constants/notifications";
 
 export const getMessages = async (
   req: Request,
@@ -67,6 +68,22 @@ export const createNewMessage = async (
     };
 
     const successAddedMessage = await MessagesRepository.save(newMessage);
+
+    const preparedNotificationMessage = {
+      type: NotificationsTypes.CREATE_MESSAGE,
+      message: {
+        text: successAddedMessage.text,
+        creator: `${successAddedMessage.creator.firstName} ${successAddedMessage.creator.lastName}`,
+        creatorId: successAddedMessage.creator.id,
+        icon:
+          successAddedMessage.chat.icon ||
+          successAddedMessage.creator.avatar ||
+          null,
+        createdAt: successAddedMessage.createdAt,
+      },
+      chatId: successAddedMessage.chat.id,
+    };
+    await sendNotification(preparedNotificationMessage);
     res.successRequest(successAddedMessage);
   } catch (error: any) {
     log.error(error);
@@ -150,7 +167,7 @@ export const forwardMessage = async (
     const newMessage = {
       text,
       creator,
-      forwardedBy, 
+      forwardedBy,
       chat,
       referenceTo,
       ...DEFAULT_MESSAGE_PROPS,
